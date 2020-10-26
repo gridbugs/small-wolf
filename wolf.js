@@ -65,17 +65,54 @@ function generateWorld() {
     }
   }
   for (let i = 0; i < world.length; i++) {
-    world[i] = 0;
-  }
-  for (let i of biggestRegion) {
     world[i] = 1;
   }
-  const playerStartIndex = biggestRegion[Math.floor(Math.random() * biggestRegion.length)];
+  for (let i of biggestRegion) {
+    world[i] = 0;
+  }
+  const distanceMap = Array.from({ length: worldWidth * worldDepth }, () => -1);
+  const edgeQueue = [];
+  for (let i = 0; i < world.length; i++) {
+    if (world[i] == 0) {
+      let count = 0;
+      for (let neighbour of [i - 1, i + 1, i - worldWidth, i + worldWidth]) {
+        count += world[neighbour];
+      }
+      if (count != 0) {
+        distanceMap[i] = 0;
+        edgeQueue.push(i);
+      }
+    }
+  }
+  let edgeIndex = 0;
+  let maxDistance = -1;
+  let playerStartCandates = [];
+  while (edgeIndex < edgeQueue.length) {
+    const currentIndex = edgeQueue[edgeIndex];
+    edgeIndex += 1;
+    if (distanceMap[currentIndex] > maxDistance) {
+      maxDistance = distanceMap[currentIndex];
+      playerStartCandates = [];
+    }
+    if (distanceMap[currentIndex] == maxDistance) {
+      playerStartCandates.push(currentIndex);
+    }
+    for (let neighbour of [currentIndex - 1, currentIndex + 1, currentIndex - worldWidth, currentIndex + worldWidth]) {
+      if (distanceMap[neighbour] == -1 && world[neighbour] == 0) {
+        distanceMap[neighbour] = distanceMap[currentIndex] + 1;
+        edgeQueue.push(neighbour);
+      }
+    }
+  }
+  const playerStartIndex = playerStartCandates[Math.floor(Math.random() * playerStartCandates.length)];
+  for (let i = 0; i < world.length; i++) {
+
+  }
   return {
     map: world,
     player: {
-      x: (playerStartIndex % worldWidth) + 0.5,
-      y: (playerStartIndex / worldWidth) + 0.5,
+      x: (playerStartIndex % worldWidth),
+      y: Math.floor(playerStartIndex / worldWidth),
       heading: 0,
     }
   };
