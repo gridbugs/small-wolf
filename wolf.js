@@ -165,9 +165,6 @@ function generateWorld() {
     }
   }
   const playerStartIndex = playerStartCandates[Math.floor(Math.abs(rng32() % playerStartCandates.length))];
-  for (let i = 0; i < world.length; i++) {
-
-  }
   return {
     map: world,
     player: {
@@ -233,12 +230,6 @@ function drawStrip(xOffset, height, distanceSquared) {
   ctx.fillRect(xOffset, yTop + height, 1, yTop);
 }
 
-function render() {
-  for (let i = 0; i < canvas.width; i++) {
-    drawStrip(i, i);
-  }
-}
-
 function processInput() {
   if (inputState.left) {
     world.player.heading += 0.05;
@@ -260,22 +251,7 @@ function processInput() {
 function frame() {
   processInput();
   castRays(world.player.x, world.player.y, world.player.heading);
-  // render();
-  //debugDrawWorld();
   requestAnimationFrame(frame);
-}
-
-function debugDrawWorld() {
-  for (let y = 0; y < worldDepth; y++) {
-    for (let x = 0; x < worldWidth; x++) {
-      let index = y * worldWidth + x;
-      ctx.fillStyle = world.map[index] ? "black" : "white";
-      ctx.fillRect(x * 10, y * 10, 10, 10);
-    }
-  }
-  ctx.fillStyle = "red";
-  ctx.fillRect(world.player.x * 10 - 2, world.player.y * 10 - 2, 4, 4);
-  castRays(world.player.x, world.player.y, world.player.heading);
 }
 
 frame();
