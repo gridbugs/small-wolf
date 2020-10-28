@@ -4,13 +4,73 @@ const ctx = canvas.getContext("2d");
 const worldWidth = 24;
 const worldDepth = 32;
 
+const inputState = {
+  up: false,
+  down: false,
+  left: false,
+  right: false,
+}
+
+document.onkeydown = (e) => {
+  switch (e.keyCode) {
+    case 37:
+      inputState.left = true;
+      break;
+    case 38:
+      inputState.up = true;
+      break;
+    case 39:
+      inputState.right = true;
+      break;
+    case 40:
+      inputState.down = true;
+      break;
+  }
+}
+
+document.onkeyup = (e) => {
+  switch (e.keyCode) {
+    case 37:
+      inputState.left = false;
+      break;
+    case 38:
+      inputState.up = false;
+      break;
+    case 39:
+      inputState.right = false;
+      break;
+    case 40:
+      inputState.down = false;
+      break;
+  }
+}
+
 function generateWorld() {
   const numIterations = 6;
   const surviveMin = 4
   const surviveMax = 8
   const resurrectMin = 5
   const resurrectMax = 5
-  let world = Array.from({ length: worldWidth * worldDepth }, () => Math.random() < 0.5 ? 0 : 1);
+  function seed() {
+    while (true) {
+      const r = Math.floor(Math.random() * (1 << 31));
+      if (r != 0) {
+        return r;
+      }
+    }
+  }
+  let prng = {
+    state: 42, //seed(),
+  };
+  function rng32() {
+    let x = prng.state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    prng.state = x;
+    return x;
+  }
+  let world = Array.from({ length: worldWidth * worldDepth }, () => rng32() < 0 ? 0 : 1);
   let copy = [...world];
   for (let i = 0; i < numIterations; i++) {
     for (let y = 0; y < worldDepth; y++) {
@@ -104,7 +164,7 @@ function generateWorld() {
       }
     }
   }
-  const playerStartIndex = playerStartCandates[Math.floor(Math.random() * playerStartCandates.length)];
+  const playerStartIndex = playerStartCandates[Math.floor(Math.abs(rng32() % playerStartCandates.length))];
   for (let i = 0; i < world.length; i++) {
 
   }
@@ -113,13 +173,50 @@ function generateWorld() {
     player: {
       x: (playerStartIndex % worldWidth),
       y: Math.floor(playerStartIndex / worldWidth),
-      heading: 0,
+      heading: Math.PI / 6,
     }
   };
 }
 
 const world = generateWorld();
 
+function castRays(x, y, heading) {
+  const dxBase = Math.cos(heading);
+  const dyBase = Math.sin(heading);
+  const fovRatio = 0.005;
+  const dxNorm = dyBase * fovRatio;
+  const dyNorm = -dxBase * fovRatio;
+  for (let j = -(canvas.width >> 1); j < (canvas.width >> 1); j++) {
+    let curX = x;
+    let curY = y;
+    const dx = dxBase + j * dxNorm;
+    const dy = dyBase + j * dyNorm;
+    const getNextXInt = dx > 0 ? x => Math.floor(x + 1) : x => Math.ceil(x - 1);
+    const getNextYInt = dy > 0 ? y => Math.floor(y + 1) : y => Math.ceil(y - 1);
+
+    //while (true) {
+    for (let i = 0; i < 40; i++) {
+      const nextXInt = getNextXInt(curX);
+      const nextYInt = getNextYInt(curY);
+      const xMul = (nextXInt - curX) / dx;
+      const yMul = (nextYInt - curY) / dy;
+      const mul = Math.min(xMul, yMul);
+      const nextX = curX + dx * mul;
+      const nextY = curY + dy * mul;
+      const xIdx = Math.floor((nextX + curX) / 2);
+      const yIdx = Math.floor((nextY + curY) / 2);
+      ctx.fillStyle = "blue";
+      if (world.map[yIdx * worldWidth + xIdx] == 1) {
+        ctx.fillStyle = "green";
+        ctx.fillRect(curX * 10 - 2, curY * 10 - 2, 4, 4);
+        break;
+      }
+      ctx.fillRect(curX * 10 - 2, curY * 10 - 2, 4, 4);
+      curX = nextX;
+      curY = nextY;
+    }
+  }
+}
 
 function drawStrip(xOffset, height) {
   const wallColour = "#FF00FF";
@@ -140,7 +237,26 @@ function render() {
   }
 }
 
+function processInput() {
+  if (inputState.left) {
+    world.player.heading -= 0.1;
+  }
+  if (inputState.right) {
+    world.player.heading += 0.1;
+  }
+  const speed = 0.5;
+  if (inputState.up) {
+    world.player.x += Math.cos(world.player.heading) * speed;
+    world.player.y += Math.sin(world.player.heading) * speed;
+  }
+  if (inputState.down) {
+    world.player.x -= Math.cos(world.player.heading) * speed;
+    world.player.y -= Math.sin(world.player.heading) * speed;
+  }
+}
+
 function frame() {
+  processInput();
   render();
   debugDrawWorld();
   requestAnimationFrame(frame);
@@ -156,6 +272,7 @@ function debugDrawWorld() {
   }
   ctx.fillStyle = "red";
   ctx.fillRect(world.player.x * 10 - 2, world.player.y * 10 - 2, 4, 4);
+  castRays(world.player.x, world.player.y, world.player.heading);
 }
 
 frame();
