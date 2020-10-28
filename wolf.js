@@ -60,7 +60,7 @@ function generateWorld() {
     }
   }
   let prng = {
-    state: 42, //seed(),
+    state: seed(),
   };
   function rng32() {
     let x = prng.state;
@@ -186,16 +186,14 @@ function castRays(x, y, heading) {
   const fovRatio = 0.005;
   const dxNorm = dyBase * fovRatio;
   const dyNorm = -dxBase * fovRatio;
-  for (let j = -(canvas.width >> 1); j < (canvas.width >> 1); j++) {
+  for (let j = 0; j < canvas.width; j++) {
     let curX = x;
     let curY = y;
-    const dx = dxBase + j * dxNorm;
-    const dy = dyBase + j * dyNorm;
+    const dx = dxBase + (j - (canvas.width >> 1)) * dxNorm;
+    const dy = dyBase + (j - (canvas.width >> 1)) * dyNorm;
     const getNextXInt = dx > 0 ? x => Math.floor(x + 1) : x => Math.ceil(x - 1);
     const getNextYInt = dy > 0 ? y => Math.floor(y + 1) : y => Math.ceil(y - 1);
-
-    //while (true) {
-    for (let i = 0; i < 40; i++) {
+    while (true) {
       const nextXInt = getNextXInt(curX);
       const nextYInt = getNextYInt(curY);
       const xMul = (nextXInt - curX) / dx;
@@ -205,23 +203,27 @@ function castRays(x, y, heading) {
       const nextY = curY + dy * mul;
       const xIdx = Math.floor((nextX + curX) / 2);
       const yIdx = Math.floor((nextY + curY) / 2);
-      ctx.fillStyle = "blue";
       if (world.map[yIdx * worldWidth + xIdx] == 1) {
-        ctx.fillStyle = "green";
-        ctx.fillRect(curX * 10 - 2, curY * 10 - 2, 4, 4);
+        const distanceX = curX - x;
+        const distanceY = curY - y;
+        const normalDistance = (dxBase * distanceX + dyBase * distanceY) / Math.sqrt(dxBase * dxBase + dyBase * dyBase);
+        if (normalDistance > 0) {
+          const distanceSquared = distanceX * distanceX + distanceY * distanceY;
+          drawStrip(j, 400 / normalDistance, distanceSquared);
+        }
         break;
       }
-      ctx.fillRect(curX * 10 - 2, curY * 10 - 2, 4, 4);
       curX = nextX;
       curY = nextY;
     }
   }
 }
 
-function drawStrip(xOffset, height) {
-  const wallColour = "#FF00FF";
+function drawStrip(xOffset, height, distanceSquared) {
+  const x = Math.min(255, Math.floor(5000 / distanceSquared));
+  const wallColour = `rgb(${x}, 0, ${x})`;
   const ceilingColour = "#00FFFF";
-  const floorColour = "#000000";
+  const floorColour = "#000088";
   const yTop = (canvas.height - height) / 2;
   ctx.fillStyle = ceilingColour;
   ctx.fillRect(xOffset, 0, 1, yTop);
@@ -239,12 +241,12 @@ function render() {
 
 function processInput() {
   if (inputState.left) {
-    world.player.heading -= 0.1;
+    world.player.heading += 0.05;
   }
   if (inputState.right) {
-    world.player.heading += 0.1;
+    world.player.heading -= 0.05;
   }
-  const speed = 0.5;
+  const speed = 0.2;
   if (inputState.up) {
     world.player.x += Math.cos(world.player.heading) * speed;
     world.player.y += Math.sin(world.player.heading) * speed;
@@ -257,8 +259,9 @@ function processInput() {
 
 function frame() {
   processInput();
-  render();
-  debugDrawWorld();
+  castRays(world.player.x, world.player.y, world.player.heading);
+  // render();
+  //debugDrawWorld();
   requestAnimationFrame(frame);
 }
 
