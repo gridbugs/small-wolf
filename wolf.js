@@ -190,7 +190,7 @@ function castRays(x, y, heading) {
     const dy = dyBase + (j - (canvas.width >> 1)) * dyNorm;
     const getNextXInt = dx > 0 ? x => Math.floor(x + 1) : x => Math.ceil(x - 1);
     const getNextYInt = dy > 0 ? y => Math.floor(y + 1) : y => Math.ceil(y - 1);
-    while (true) {
+    for (let i = 0; i < Math.max(worldWidth, worldDepth); i++) {
       const nextXInt = getNextXInt(curX);
       const nextYInt = getNextYInt(curY);
       const xMul = (nextXInt - curX) / dx;
