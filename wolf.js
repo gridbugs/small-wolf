@@ -1,6 +1,6 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-
+var myrng = new Math.seedrandom('hello.');
 const worldWidth = 24;
 const worldDepth = 32;
 
@@ -53,7 +53,7 @@ function generateWorld() {
   const resurrectMax = 5
   function seed() {
     while (true) {
-      const r = Math.floor(Math.random() * (1 << 31));
+      const r = Math.floor(myrng.quick() * (1 << 31));
       if (r != 0) {
         return r;
       }
@@ -217,7 +217,11 @@ function castRays(x, y, heading) {
 }
 
 function drawStrip(xOffset, height, distanceSquared) {
-  const x = Math.min(255, Math.floor(5000 / distanceSquared));
+  let C = 0.1;
+  let distance = Math.sqrt(distanceSquared);
+  let denom_sqrt = C * distance + 1;
+  let brightness = 1 / (denom_sqrt * denom_sqrt);
+  const x = Math.min(255, Math.floor(255 * brightness));
   const wallColour = `rgb(${x}, 0, ${x})`;
   const ceilingColour = "#00FFFF";
   const floorColour = "#000088";
